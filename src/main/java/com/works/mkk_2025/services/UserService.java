@@ -2,10 +2,13 @@ package com.works.mkk_2025.services;
 
 import com.works.mkk_2025.entities.Customer;
 import com.works.mkk_2025.repositories.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -16,9 +19,11 @@ public class UserService {
 
     private final UserRepository userRepository;
     String name = "mkk";
+    private final HttpServletRequest req;
 
     @Async
     public String textChange() {
+        System.currentTimeMillis();
         Random ran = new Random();
         String data = "a";
         String data1 = new String("a");
@@ -58,6 +63,8 @@ public class UserService {
             list.add(user);
         }
         System.out.println(list.size());
+
+        req.getSession().setAttribute("name", "ali@mail.com");
 
         return name;
     }
