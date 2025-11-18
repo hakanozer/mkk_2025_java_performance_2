@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring Boot 3.5 REST API - Performance Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            line-height: 1.7;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.35);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 50px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+            font-weight: 700;
+        }
+        
+        header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            font-weight: 300;
+        }
+        
+        .content {
+            padding: 50px;
+        }
+        
+        .topic {
+            margin-bottom: 60px;
+            padding: 40px;
+            background: linear-gradient(135deg, #f8f9fd 0%, #e9ecf5 100%);
+            border-radius: 20px;
+            border-left: 6px solid #667eea;
+            transition: all 0.3s ease;
+        }
+        
+        .topic:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.25);
+        }
+        
+        .topic h2 {
+            color: #1e3c72;
+            margin-bottom: 25px;
+            font-size: 2em;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-weight: 700;
+        }
+        
+        .topic-number {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.3em;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .importance {
+            background: linear-gradient(135deg, #fff8e1 0%, #ffe9a0 100%);
+            border-left: 5px solid #ffc107;
+            padding: 25px;
+            margin: 25px 0;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.15);
+        }
+        
+        .importance h3 {
+            color: #f57f17;
+            margin-bottom: 12px;
+            font-size: 1.2em;
+            font-weight: 700;
+        }
+        
+        .importance p {
+            color: #5d4037;
+            font-size: 1.05em;
+            line-height: 1.7;
+        }
+        
+        .code-block {
+            background: #1e1e2e;
+            color: #e0e0e0;
+            padding: 30px;
+            border-radius: 16px;
+            margin: 25px 0;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+            font-size: 15px;
+            line-height: 1.8;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            position: relative;
+            border: 1px solid #2d2d44;
+        }
+        
+        .code-block::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 35px;
+            background: #2d2d44;
+            border-radius: 16px 16px 0 0;
+        }
+        
+        .code-block::after {
+            content: '⚡ CODE';
+            position: absolute;
+            top: 8px;
+            left: 20px;
+            color: #667eea;
+            font-size: 12px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        
+        .code-content {
+            margin-top: 25px;
+        }
+        
+        .code-block .keyword {
+            color: #c792ea;
+            font-weight: 600;
+        }
+        
+        .code-block .string {
+            color: #89ddff;
+        }
+        
+        .code-block .comment {
+            color: #6b7280;
+            font-style: italic;
+        }
+        
+        .code-block .annotation {
+            color: #f78c6c;
+            font-weight: 600;
+        }
+        
+        .code-block .number {
+            color: #ff6b9d;
+        }
+        
+        .code-block .method {
+            color: #82aaff;
+        }
+        
+        .code-block .class-name {
+            color: #ffcb6b;
+        }
+        
+        .subsection {
+            margin: 30px 0;
+            padding: 30px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid #e5e7eb;
+        }
+        
+        .subsection h3 {
+            color: #2a5298;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .subsection h3::before {
+            content: '▸';
+            color: #667eea;
+            font-size: 1.3em;
+        }
+        
+        .line {
+            margin: 8px 0;
+        }
+        
+        .highlight {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            padding: 3px 8px;
+            border-radius: 6px;
+            color: #0d47a1;
+            font-weight: 700;
+        }
+        
+        footer {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            text-align: center;
+            padding: 30px;
+            font-size: 1.1em;
+        }
+        
+        .pro-tip {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-left: 5px solid #4caf50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.15);
+        }
+        
+        .pro-tip h4 {
+            color: #2e7d32;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            font-weight: 700;
+        }
+        
+        .pro-tip p {
+            color: #1b5e20;
+            line-height: 1.7;
+        }
+        
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 25px;
+            }
+            
+            .topic {
+                padding: 25px;
+            }
+            
+            .code-block {
+                padding: 20px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Spring Boot 3.5 REST API</h1>
+            <p>Performance & Tuning - İleri Seviye Rehber</p>
+        </header>
+        
+        <div class="content">
+            
+            <!-- Topic 1 -->
+            <div class="topic">
+                <h2><span class="topic-number">1</span>JVM Yapısı & Performans Temelleri</h2>
+                
+                <div class="importance">
+                    <h3>⚡ Neden Önemli?</h3>
+                    <p>JVM'in nasıl çalıştığını anlamak, performans sorunlarının kök nedenini bulmanın temelidir. ClassLoader, JIT compiler ve bellek modeli optimizasyonları, uygulamanızın hızını <span class="highlight">2-3 kat</span> artırabilir.</p>
+                </div>
+                
+                <div class="subsection">
+                    <h3>JIT Compiler Optimizasyonu</h3>
+                    <div class="code-block">
+                        <div class="code-content">
+<div class="line"><span class="comment">// JIT, sık çağrılan metotları optimize eder ve inline'lar</span></div>
+<div class="line"><span class="keyword">public class</span> <span class="class-name">JITExample</span> {</div>
+<div class="line">    </div>
+<div class="line">    <span class="keyword">public static void</span> <span class="method">main</span>(String[] args) {</div>
+<div class="line">        <span class="comment">// Bu döngü metodu "sıcak nokta" haline getirir</span></div>
+<div class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">100000</span>; i++) {</div>
+<div class="line">            <span class="method">calculateSum</span>(<span class="number">10</span>, <span class="number">20</span>);</div>
+<div class="line">        }</div>
+<div class="line">    }</div>
+<div class="line">    </div>
+<div class="line">    <span class="comment">// JIT bu metodu inline'layacak - method call overhead'i kaldırılır</span></div>
+<div class="line">    <span class="keyword">private static int</span> <span class="method">calculateSum</span>(<span class="keyword">int</span> a, <span class="keyword">int</span> b) {</div>
+<div class="line">        <span class="keyword">return</span> a + b;</div>
+<div class="line">    }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line"><span class="comment">// JVM flag ile optimizasyon izleme:</span></div>
+<div class="line"><span class="comment">// java -XX:+PrintCompilation JITExample</span></div>
+                        </div>
+                    </div>
+                    
+                    <div class="pro-tip">
+                        <h4>💡 Pro Tip</h4>
+                        <p>Tiered Compilation kullanarak hem hızlı başlangıç hem de uzun vadeli performans elde edin: <strong>-XX:+TieredCompilation</strong></p>
+                    </div>
+                </div>
+                
+                <div class="subsection">
+                    <h3>Metaspace Memory Tuning</h3>
+                    <div class="code-block">
+                        <div class="code-content">
+<div class="line"><span class="comment"># application.properties</span></div>
+<div class="line"></div>
+<div class="line"><span class="comment"># Metaspace başlangıç ve maksimum boyutları</span></div>
+<div class="line">-XX:MetaspaceSize=<span class="string">256m</span></div>
+<div class="line">-XX:MaxMetaspaceSize=<span class="string">512m</span></div>
+<div class="line"></div>
+<div class="line"><span class="comment"># Class unloading'i etkinleştir (memory leak önleme)</span></div>
+<div class="line">-XX:+CMSClassUnloadingEnabled</div>
+<div class="line"></div>
+<div class="line"><span class="comment"># Compressed Class Space optimizasyonu</span></div>
+<div class="line">-XX:CompressedClassSpaceSize=<span class="string">256m</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Topic 2 -->
+            <div class="topic">
+                <h2><span class="topic-number">2</span>Garbage Collector Derinlemesine</h2>
+                
+                <div class="importance">
+                    <h3>⚡ Neden Önemli?</h3>
+                    <p>GC pause'lar, REST API'nizde <span class="highlight">100-500ms</span> gecikmelere neden olabilir. Doğru GC seçimi ve tuning ile pause sürelerini <span class="highlight">10ms altına</span> düşürebilir, throughput'u <span class="highlight">%30</span> artırabilirsiniz.</p>
+                </div>
+                
+                <div class="subsection">
+                    <h3>G1GC Configuration (Spring Boot Default)</h3>
+                    <div class="code-block">
+                        <div class="code-content">
+<div class="line"><span class="comment"># G1GC - Balanced performans için en iyi seçenek</span></div>
+<div class="line">-XX:+UseG1GC</div>
+<div class="line"></div>
+<div class="line"><span class="comment"># Hedef pause time (milisaniye)</span></div>
+<div class="line">-XX:MaxGCPauseMillis=<span class="number">200</span></div>
+<div class="line"></div>
+<div class="line"><span class="comment"># Heap region boyutu (1MB-32MB arası)</span></div>
+<div class="line">-XX:G1HeapRegionSize=<span class="string">16m</span></div>
+<div class="line"></div>
+<div class="line"><span class="comment"># Concurrent marking başlatma eşiği</span></div>
+<div class="line">-XX:InitiatingHeapOccupancyPercent=<span class="number">45</span></div>
+<div class="line"></div>
+<div class="line"><span class="comment"># GC log'larını detaylı kaydet</span></div>
+<div class="line">-Xlog:gc*:file=<span class="string">logs/gc.log</span>:time,uptime:filecount=<span class="number">5</span>,filesize=<span class="string">100m</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="subsection">
+                    <h3>ZGC - Ultra Low Latency (Java 17+)</h3>
+                    <div class="code-block">
+                        <div class="code-content">
+<div class="line"><span class="comment"># ZGC - Sub-10ms pause guarantee!</span></div>
+<div class="line">-XX:+UseZGC</div>
+<div class="line">-XX:ZCollectionInterval=<span class="number">5</span></div>
+<div class="line"></div>
+<div class="line"><span class="comment"># Heap boyutu (ZGC için min=max olmalı)</span></div>
+<div class="line">-Xmx<span class="string">4g</span></div>
+<div class="line">-Xms<span class="string">4g</span></div>
+<div class="line"></div>
+<div class="line"><span class="comment">// Spring Boot Application ile ZGC kullanımı</span></div>
+<div class="line"><span class="annotation">@SpringBootApplication</span></div>
+<div class="line"><span class="keyword">public class</span> <span class="class-name">HighPerformanceApp</span> {</div>
+<div class="line">    </div>
+<div class="line">    <span class="keyword">public static void</span> <span class="method">main</span>(String[] args) {</div>
+<div class="line">        <span class="comment">// Aktif GC'yi logla</span></div>
+<div class="line">        ManagementFactory.<span class="method">getGarbageCollectorMXBeans</span>().<span class="method">forEach</span>(gc -></div>
+<div class="line">            System.out.<span class="method">println</span>(<span class="string">"GC: "</span> + gc.<span class="method">getName</span>())</div>
+<div class="line">        );</div>
+<div class="line">        </div>
+<div class="line">        SpringApplication.<span class="method">run</span>(HighPerformanceApp.<span class="keyword">class</span>, args);</div>
+<div class="line">    }</div>
+<div class="line">}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="pro-tip">
+                        <h4>💡 Pro Tip</h4>
+                        <p>4GB+ heap için ZGC, 2GB altı için G1GC tercih edin. Production'da GC loglarını mutlaka aktif tutun!</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Topic 3 -->
+            <div class="topic">
+                <h2><span class="topic-number">3</span>Memory Tuning & Profiling</h2>
+                
+                <div class="importance">
+                    <h3>⚡ Neden Önemli?</h3>
+                    <p>Memory leak'ler zamanla <span class="highlight">OutOfMemoryError</span>'a yol açar. Thread dump analizi ile deadlock'ları <span class="highlight">5 dakikada</span> tespit edebilir, production'daki gizli sorunları çözebilirsiniz.</p>
+                </div>
+                
+                <div class="subsection">
+                    <h3>Heap Dump - Memory Leak Tespiti</h3>
+                    <div class="code-block">
+                        <div class="code-content">
+<div class="line"><span class="comment"># Otomatik heap dump (OOM durumunda)</span></div>
+<div class="line">-XX:+HeapDumpOnOutOfMemoryError</div>
+<div class="line">-XX:HeapDumpPath=<span class="string">/var/logs/heapdump.hprof</span></div>
+<div class="line"></div>
+<div class="line"><span class="comment"># Manuel heap dump alma (production'da)</span></div>
+<div class="line">jmap -dump:live,format=b,file=heap.bin <span class="string">&lt;pid&gt;</span></div>
+<div class="line"></div>
+<div class="line"><span class="comment"># JFR ile detaylı profiling</span></div>
+<div class="line">jcmd <span class="string">&lt;pid&gt;</span> JFR.start duration=<span class="number">60</span>s filename=recording.jfr</div>
+<div class="line"></div>
+<div class="line"><span class="comment"># Eclipse MAT ile analiz:</span></div>
+<div class="line"><span class="comment"># 1. Heap dump'ı aç</span></div>
+<div class="line"><span class="comment"># 2. "Leak Suspects Report" çalıştır</span></div>
+<div class="line"><span class="comment"># 3. Dominator Tree'yi incele</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="subsection">
+                    <h3>Thread Dump - Deadlock & Performance Analysis</h3>
+                    <div class="code-block">
+                        <div class="code-content">
+<div class="line"><span class="comment">// ❌ KÖTÜ: Deadlock riski taşıyan kod</span></div>
+<div class="line"><span class="keyword">public class</span> <span class="class-name">DeadlockRisk</span> {</div>
+<div class="line">    <span class="keyword">private final</span> Object lock1 = <span class="keyword">new</span> Object();</div>
+<div class="line">    <span class="keyword">private final</span> Object lock2 = <span class="keyword">new</span> Object();</div>
+<div class="line">    </div>
+<div class="line">    <span class="keyword">public void</span> <span class="method">method1</span>() {</div>
+<div class="line">        <span class="keyword">synchronized</span>(lock1) {</div>
+<div class="line">            <span class="keyword">synchronized</span>(lock2) {</div>
+<div class="line">                <span class="comment">// İşlem</span></div>
+<div class="line">            }</div>
+<div class="line">        }</div>
+<div class="line">    }</div>
+<div class="line">    </div>
+<div class="line">    <span class="keyword">public void</span> <span class="method">method2</span>() {</div>
+<div class="line">        <span class="keyword">synchronized</span>(lock2) {  <span class="comment">// Ters sıralama - Deadlock!</span></div>
+<div class="line">            <span class="keyword">synchronized</span>(lock1) {</div>
+<div class="line">                <span class="comment">// İşlem</span></div>
+<div class="line">            }</div>
+<div class="line">        }</div>
+<div class="line">    }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line"><span class="comment">// Thread dump alma komutları:</span></div>
+<div class="line">jstack <span class="string">&lt;pid&gt;</span> > threaddump.txt</div>
+<div class="line"></div>
+<div class="line"><span class="comment">// ya da JDK Mission Control ile:</span></div>
+<div class="line">jcmd <span class="string">&lt;pid&gt;</span> Thread.print</div>
+                        </div>
+                    </div>
+                    
+                    <div class="pro-tip">
+                        <h4>💡 Pro Tip</h4>
+                        <p>Her zaman lock'ları <strong>aynı sırada</strong> alın! Lock ordering discipline deadlock'ları %100 önler.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Topic 4 -->
+            <div class="topic">
+                <h2><span class="topic-number">4</span>Collections & Data Structures</h2>
+                
+                <div class="importance">
+                    <h3>⚡ Neden Önemli?</h3>
+                    <p>Yanlış collection seçimi CPU ve memory waste'ine neden olur. <span class="highlight">ArrayList vs LinkedList</span> farkı <span class="highlight">10x</span> performans farkı yaratabilir. ConcurrentHashMap ile thread-safe işlemler <span class="highlight">5x daha hızlı</span>dır.</p>
+                </div>
+                
+                <div class="subsection">
+                    <h3>ArrayList vs LinkedList - Doğru Seçim</h3>
+                    <div class="code-block">
+                        <div class="code-content">
+<div class="line"><span class="comment">// ❌ YANLIŞ: Random access için LinkedList</span></div>
+<div class="line">List&lt;User&gt; users = <span class="keyword">new</span> LinkedList&lt;&gt;();</div>
+<div class="line">users.<span class="method">get</span>(<span class="number">5000</span>);  <span class="comment">// O(n) - Çok yavaş!</span></div>
+<div class="line"></div>
+<div class="line"><span class="comment">// ✅ DOĞRU: Random access için ArrayList</span></div>
+<div class="line">List&lt;User&gt; users = <span class="keyword">new</span> ArrayList&lt;&gt;();</div>
+<div class="line">users.<span class="method">get</span>(<span class="number">5000</span>);  <span class="comment">// O(1) - Çok hızlı!</span></div>
+<div class="line"></div>
+<div class="line"><span class="comment">// ✅ LinkedList sadece queue operasyonları için</span></div>
+<div class="line">LinkedList&lt;Task&gt; queue = <span class="keyword">new</span> LinkedList&lt;&gt;();</div>
+<div class="line">queue.<span class="method">addFirst</span>(task);   <span class="comment">// O(1)</span></div>
+<div class="line">queue.<span class="method">removeLast</span>();    <span class="comment">// O(1)</span></div>
+<div class="line"></div>
+<div class="line"><span class="comment">// 🎯 Best Practice: Initial capacity belirle</span></div>
+<div class="line">List&lt;User&gt; users = <span class="keyword">new</span> ArrayList&lt;&gt;(<span class="number">1000</span>);  <span class="comment">// Resize overhead'i önle</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="subsection">
+                    <h3>ConcurrentHashMap - High Performance Thread Safety</h3>
+                    <div class="code-block">
+                        <div class="code-content">
+<div class="line"><span class="annotation">@Service</span></div>
+<div class="line"><span class="keyword">public class</span> <span class="class-name">CacheService</span> {</div>
+<div class="line">    </div>
+<div class="line">    <span class="comment">// ✅ Lock-free reads, segment-level locking</span></div>
+<div class="line">    <span class="keyword">private final</span> ConcurrentHashMap&lt;String, User&gt; cache = </div>
+<div class="line">        <span class="keyword">new</span> ConcurrentHashMap&lt;&gt;(<span class="number">16</span>, <span class="number">0.75f</span>, <span class="number">4</span>);  <span class="comment">// concurrency level</span></div>
+<div class="line">    </div>
+<div class="line">    <span class="keyword">public</span> User <span class="method">getOrLoad</span>(String id) {</div>
+<div class="line">        <span class="comment">// Atomic compute-if-absent</span></div>
+<div class="line">        <span class="keyword">return</span> cache.<span class="method">computeIfAbsent</span>(id, </div>
+<div class="line">            k -> userRepository.<span class="method">findById</span>(k)</div>
+<div class="line">        );</div>
+<div class="line">    }</div>
+<div class="line">    </div>
+<div class="line">    <span class="comment">// 🚀 LongAdder: AtomicLong'dan 4x daha hızlı!</span></div>
+<div class="line">    <span class="keyword">private final</span> LongAdder requestCount = <span class="keyword">new</span> LongAdder();</div>
+<div class="line">    </div>
+<div class="line">    <span class="keyword">public void</span> <span class="method">incrementRequests</span>() {</div>
+<div class="line">        requestCount.<span class="method">increment</span>();  <span class="comment">// No contention!</span></div>
+<div class="line">    }</div>
+<div class="line">    </div>
+<div class="line">    <span class="keyword">public long</span> <span class="method">getTotalRequests</span>() {</div>
+<div class="line">        <span class="keyword">return</span> requestCount.<span class="method">sum</span>();</div>
+<div class="line">    }</div>
+<div class="line">}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="pro-tip">
+                        <h4>💡 Pro Tip</h4>
+                        <p>High contention senaryolarında <strong>LongAdder</strong> kullanın. Write-heavy cache için <strong>CopyOnWriteArrayList</strong> düşünün!</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Topic 5 -->
+            <div class="topic">
+                <h2><span class="topic-number">5</span>Multithreading & Concurrency</h2>
+                
+                <div class="importance">
+                    <h3>⚡ Neden Önemli?</h3>
+                    <p>Thread pool yanlış ayarları request queue dolmasına, timeout'lara ve sistem çökmesine yol açar. <span class="highlight">Virtual Threads (Loom)</span> ile <span class="highlight">10,000+</span> concurrent request'i <span class="highlight">1GB RAM</span> ile handle edebilirsiniz.</p>
+                </div>
+                
+                <div class="subsection">
+                    <h3>Thread Pool Tuning - CPU vs IO Bound</h3>
+                    <div class="code-block">
+                        <div class="code-content">
+<div class="line"><span class="annotation">@Configuration</span></div

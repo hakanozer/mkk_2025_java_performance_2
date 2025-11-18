@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>🚀 Spring Boot 3.5 REST API için Performans Optimizasyonları</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 20px; background-color: #f4f4f9; color: #333; }
+        .container { max-width: 1200px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { color: #0056b3; border-bottom: 3px solid #0056b3; padding-bottom: 10px; text-align: center; }
+        h2 { color: #d9534f; margin-top: 25px; border-left: 5px solid #d9534f; padding-left: 10px; }
+        h3 { color: #5cb85c; margin-top: 15px; }
+        .importance { background-color: #e6f7ff; border-left: 5px solid #337ab7; padding: 10px; margin-bottom: 15px; border-radius: 4px; }
+        .example { background-color: #f9f9f9; border: 1px solid #ddd; padding: 15px; margin-top: 10px; border-radius: 4px; overflow-x: auto; }
+        code {  padding: 2px 4px; border-radius: 3px; font-family: Consolas, monospace; }
+        pre { background-color: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        strong { color: #337ab7; }
+        .topic-group { margin-bottom: 30px; padding: 15px; border: 1px dashed #ccc; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Java Performans & Tuning - REST API Odaklı İpuçları</h1>
+
+        <div class="topic-group">
+            <h2>1️⃣ JVM Yapısı & Performans Temelleri</h2>
+            <div class="importance">
+                <p><strong>Önem:</strong> Bir Spring Boot uygulamasının temel çalışma prensibini anlamak, <strong>CPU ve bellek kullanımının</strong> en alt seviyede nasıl yönetildiğini görmeyi sağlar. Özellikle <strong>JIT Compiler optimizasyonları</strong> (<code>method inlining</code>, <code>escape analysis</code>) ile derleme aşamasında performansı artıracak kararlar verilir, bu da API'nin yanıt süresini (latency) direkt etkiler.</p>
+            </div>
+            <h3>Basit Örnek: JIT için Loop Optimizasyonu</h3>
+            <div class="example">
+                <p>Basit bir <code>for</code> döngüsünün JIT tarafından nasıl optimize edildiğini kod düzeyinde görmek zordur, ancak yüksek iterasyonlu döngülerde JIT'in <strong>Loop Unrolling</strong> gibi tekniklerle performansı artırdığını bilmek gerekir.</p>
+                <pre><code>// JIT, bu tür yoğun döngüleri donanım seviyesinde daha hızlı çalışacak şekilde optimize eder.
+long sum = 0;
+for (int i = 0; i < 1_000_000; i++) {
+    sum += i;
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="topic-group">
+            <h2>2️⃣ Garbage Collector Derinlemesine</h2>
+            <div class="importance">
+                <p><strong>Önem:</strong> <strong>Garbage Collector (GC)</strong>, bellek sızıntılarını önler ve kullanılmayan nesneleri temizler. Ancak, bu süreçler <strong>"Stop-The-World" (STW)</strong> duraklamalarına neden olabilir. Özellikle <strong>G1GC'yi</strong> (Spring Boot varsayılanı) optimize etmek, yüksek trafikli REST API'lerinde <strong>düşük latency</strong> ve tutarlı yanıt süreleri için kritiktir.</p>
+            </div>
+            <h3>Basit Örnek: G1GC için Tuning</h3>
+            <div class="example">
+                <p>Uygulama başlatma sırasında GC duraklama sürelerini kontrol altına almak için temel JVM argümanları:</p>
+                <pre><code>java -Xms2g -Xmx2g -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -jar my-app.jar</code></pre>
+                <p>Bu, G1GC'nin <strong>100 milisaniye'den uzun</strong> duraklamaları önceliklendirmesini sağlar.</p>
+            </div>
+        </div>
+
+        <div class="topic-group">
+            <h2>3️⃣ Java Memory Tuning & Profiling Teknikleri</h2>
+            <div class="importance">
+                <p><strong>Önem:</strong> Performans sorunlarının çoğu **bellek sızıntıları (Memory Leak)** veya **thread tıkanıklıklarından (Deadlock/Starvation)** kaynaklanır. <strong>JFR, JMC</strong> ve <strong>Flame Graph</strong> analizi gibi araçlar, canlı sistemlerde bu tür gizli ve karmaşık darboğazları (bottlenecks) **minimal overhead** ile tespit etmenin tek yoludur.</p>
+            </div>
+            <h3>Basit Örnek: Thread Dump Alma</h3>
+            <div class="example">
+                <p>Uygulama yüksek CPU kullanırken, mevcut thread durumunu analiz etmek için kullanılır:</p>
+                <pre><code># Süreci bul
+jps
+# Thread dump al (3456 PID'li uygulama için)
+jstack 3456 > thread-dump.txt</code></pre>
+            </div>
+        </div>
+
+        <div class="topic-group">
+            <h2>4️⃣ Java Collections & Data Structures Performans Analizi</h2>
+            <div class="importance">
+                <p><strong>Önem:</strong> Doğru koleksiyon yapısının seçilmesi, özellikle yüksek trafikli API'lerdeki <strong>veri erişim ve manipülasyonunun</strong> performansını direkt olarak saniyenin altındaki (sub-second) seviyelerde etkiler. Yanlış koleksiyon kullanımı (örneğin, gereksiz senkronizasyon), **Contention** yaratır.</p>
+            </div>
+            <h3>Basit Örnek: ConcurrentHashMap Kullanımı</h3>
+            <div class="example">
+                <p>Birden çok thread'in aynı anda eriştiği bir cache veya sayaç yapısında <code>Hashtable</code> yerine **daha düşük Contention** sağlayan <code>ConcurrentHashMap</code> kullanılır:</p>
+                <pre><code>// Thread-safe ve daha yüksek performanslı
+private final ConcurrentHashMap&lt;String, Integer> requestCounter = new ConcurrentHashMap<>();
+
+public void increment(String endpoint) {
+    requestCounter.compute(endpoint, (k, v) -> (v == null) ? 1 : v + 1);
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="topic-group">
+            <h2>5️⃣ Multithreading & Concurrency Tuning</h2>
+            <div class="importance">
+                <p><strong>Önem:</strong> Bir REST API'nin temel amacı, eşzamanlı istekleri hızlıca işlemektir. <strong>Thread Pool'ların</strong> (Tomcat/Jetty/Netty) ve iş mantığındaki <strong>kilit mekanizmalarının</strong> doğru ayarlanması, sistemin <strong>eşzamanlı kullanıcı (concurrency)</strong> kapasitesini ve <strong>verimliliğini (throughput)</strong> doğrudan belirler. <strong>Virtual Threads (Project Loom)</strong> ile IO-bound iş yüklerinde maliyet düşürülür.</p>
+            </div>
+            <h3>Basit Örnek: ForkJoinPool (Parallel Stream)</h3>
+            <div class="example">
+                <p>IO-bound olmayan, yoğun hesaplama gerektiren görevlerde <code>parallelStream()</code> kullanımı:</p>
+                <pre><code>// Yoğun hesaplama (CPU-bound) için uygundur
+List&lt;Long> results = longList.parallelStream()
+    .map(this::heavyCalculation)
+    .collect(Collectors.toList());</code></pre>
+            </div>
+        </div>
+
+        <div class="topic-group">
+            <h2>6️⃣ Spring Boot Performans Optimizasyonları</h2>
+            <div class="importance">
+                <p><strong>Önem:</strong> Çerçeveye özgü optimizasyonlar, **başlangıç süresini (startup time)**, **hafıza tüketimini (memory footprint)** ve **istek işleme hızını** etkiler. Özellikle <strong>Jackson serialization performance</strong> ve <strong>Tomcat Thread Pool tuning'i</strong>, API'nin gerçek dünyadaki <strong>throughput</strong> ve <strong>latency</strong> metriklerini iyileştirmenin en hızlı yollarındandır.</p>
+            </div>
+            <h3>Basit Örnek: Lazy Initialization</h3>
+            <div class="example">
+                <p>Uygulama başlangıcını hızlandırmak için sadece ihtiyaç duyulduğunda yüklenen bir Bean:</p>
+                <pre><code>@Service
+@Lazy // Bean, ilk enjeksiyon anında oluşturulur
+public class HeavyInitializationService {
+    // ...
+}</code></pre>
+                <p>Basit Örnek: Caffeine Caching</p>
+                <pre><code>// Bir serviste basit bir local cache kullanımı
+@Cacheable("products")
+public Product getProductById(String id) {
+    // Veritabanı sorgusu burada yapılır
+    return productRepository.findById(id);
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="topic-group">
+            <h2>7️⃣ Database Tuning (API performansını en çok etkileyen alan)</h2>
+            <div class="importance">
+                <p><strong>Önem:</strong> Çoğu REST API'de **%80'den fazla yanıt süresi** veritabanı işlemlerinde harcanır. <strong>HikariCP</strong>'nin doğru ayarlanması, **bağlantı bekleme sürelerini** (connection waiting time) azaltır. <strong>Hibernate N+1 Problems</strong>'in çözümü ve **DTO Projection** kullanılması, API'nin DB katmanındaki yükü katlanarak düşürür.</p>
+            </div>
+            <h3>Basit Örnek: N+1 Sorununu Çözmek (Batch Fetching)</h3>
+            <div class="example">
+                <p>Aynı sorgu içinde ilişkili veriyi de yüklemek için <code>@BatchSize</code> veya JPQL <code>FETCH JOIN</code> kullanılır:</p>
+                <pre><code>// @Entity üzerinde
+@BatchSize(size = 20) // 1 yerine 20 alt öğeyi tek sorguda getirir
+@OneToMany(mappedBy = "category")
+private List&lt;Product> products;</code></pre>
+            </div>
+        </div>
+
+        <div class="topic-group">
+            <h2>8️⃣ Microservice & Cloud Mimarilerde Performans</h2>
+            <div class="importance">
+                <p><strong>Önem:</strong> Dağıtık mimarilerde, tek bir API çağrısı birden fazla servisi tetikler. **Service-to-service latency** ve **hata toleransı (Circuit Breaker)** kritik hale gelir. **OpenTelemetry** gibi araçlarla <strong>uçtan uca (end-to-end) tracing</strong> yapmak, performans darboğazının hangi serviste olduğunu hızla tespit etmeyi sağlar.</p>
+            </div>
+            <h3>Basit Örnek: Circuit Breaker Kullanımı (Resilience4j)</h3>
+            <div class="example">
+                <p>Bağımlı bir servisin çökmesini önlemek ve geri dönüş (fallback) sağlamak:</p>
+                <pre><code>@Service
+public class ExternalService {
+
+    @CircuitBreaker(name = "externalApi", fallbackMethod = "getFallbackData")
+    public Data fetchData() {
+        // Harici API çağrısı
+    }
+
+    private Data getFallbackData(Throwable t) {
+        // Hata durumunda dönecek varsayılan veya önbellekteki veri
+        return new Data("Default Data");
+    }
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="topic-group">
+            <h2>9️⃣ Benchmarking & Ölçme Teknikleri</h2>
+            <div class="importance">
+                <p><strong>Önem:</strong> Performans iyileştirmeleri **kesinlikle ölçülmelidir**. <strong>JMH (Java Microbenchmark Harness)</strong>, özellikle küçük kod bloklarının (collections, algoritmalar) JIT ve GC etkilerinden arındırılmış, doğru ve güvenilir bir şekilde karşılaştırılması için endüstri standardıdır. Bu, rastgele tahminler yerine <strong>veriye dayalı optimizasyon</strong> yapmayı sağlar.</p>
+            </div>
+            <h3>Basit Örnek: JMH ile Benchmark</h3>
+            <div class="example">
+                <p><code>@Benchmark</code> ile iki farklı toplama yöntemini karşılaştırma:</p>
+                <pre><code>@Benchmark
+public int testArrayList() {
+    // ... ArrayList ile işlem
+}
+
+@Benchmark
+public int testLinkedList() {
+    // ... LinkedList ile işlem
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="topic-group">
+            <h2>🔟 High-Performance Architectures & Best Practices</h2>
+            <div class="importance">
+                <p><strong>Önem:</strong> Sınırları zorlayan uygulamalar için mimari kararlar gereklidir. <strong>Reactive programming (WebFlux)</strong>, geleneksel senkron (Sync) blocking mimarilere göre **çok daha yüksek eşzamanlılık** sağlayarak IO-bound iş yüklerinde verimi artırır. <strong>GraalVM Native Image</strong>, uygulamanın **başlangıç süresini saniyenin altına** düşürür ve bellek kullanımını büyük ölçüde azaltır.</p>
+            </div>
+            <h3>Basit Örnek: WebFlux (Reactive) Controller</h3>
+            <div class="example">
+                <p>Blocking olmayan (non-blocking) bir API endpoint'i:</p>
+                <pre><code>@GetMapping("/products/reactive/{id}")
+public Mono&lt;Product> getProductReactive(@PathVariable String id) {
+    // Mono/Flux ile async DB erişimi
+    return productService.findById(id);
+}</code></pre>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
