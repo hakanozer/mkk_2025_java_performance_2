@@ -3,21 +3,22 @@ package com.works.mkk_2025.entities;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.List;
 
 @Data
 @Entity
-public class Customer {
+public class Customer implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Integer uid;
     private String name;
-    private String surname;
+    private String email;
+    private String password;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    private List<Address> address;
+    //@ManyToMany
+    //private List<Address> address;
 
 }
